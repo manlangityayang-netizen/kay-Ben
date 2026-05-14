@@ -1,142 +1,215 @@
 import 'package:flutter/material.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:intl/intl.dart';
 
 void main() {
-  runApp(const AgeApp());
+  runApp(const EasyAttendApp());
 }
 
-class AgeApp extends StatelessWidget {
-  const AgeApp({super.key});
+class EasyAttendApp extends StatelessWidget {
+  const EasyAttendApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      title: 'EasyAttend',
       debugShowCheckedModeBanner: false,
-      home: const AgeHome(),
+      theme: ThemeData(
+        primarySwatch: Colors.indigo,
+        scaffoldBackgroundColor: const Color(0xFFF5F6FA),
+      ),
+      home: const DashboardScreen(),
     );
   }
 }
 
-class AgeHome extends StatefulWidget {
-  const AgeHome({super.key});
+// ---------------- DATA MODEL ----------------
+class AttendanceRecord {
+  final String studentId;
+  final String dateTime;
+  final String status;
+
+  AttendanceRecord({
+    required this.studentId,
+    required this.dateTime,
+    required this.status,
+  });
+}
+
+// ---------------- MOCK DATABASE ----------------
+List<AttendanceRecord> attendanceList = [];
+
+// ---------------- DASHBOARD ----------------
+class DashboardScreen extends StatelessWidget {
+  const DashboardScreen({super.key});
 
   @override
-  State<AgeHome> createState() => _AgeHomeState();
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("EasyAttend"),
+        centerTitle: true,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            _buildCard(
+              context,
+              title: "Scan Attendance",
+              icon: Icons.qr_code_scanner,
+              color: Colors.indigo,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ScannerScreen()),
+                );
+              },
+            ),
+            const SizedBox(height: 16),
+            _buildCard(
+              context,
+              title: "Attendance Records",
+              icon: Icons.list_alt,
+              color: Colors.green,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const RecordsScreen()),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCard(BuildContext context,
+      {required String title,
+      required IconData icon,
+      required Color color,
+      required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 120,
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: Colors.white, size: 40),
+            const SizedBox(width: 16),
+            Text(
+              title,
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold),
+            )
+          ],
+        ),
+      ),
+    );
+  }
 }
 
-class _AgeHomeState extends State<AgeHome> {
-  DateTime? birthDate;
-  String result = "No result yet";
+// ---------------- QR SCANNER ----------------
+class ScannerScreen extends StatefulWidget {
+  const ScannerScreen({super.key});
 
-  void pickDate() async {
-    DateTime? date = await showDatePicker(
-      context: context,
-      initialDate: DateTime(2005),
-      firstDate: DateTime(1900),
-      lastDate: DateTime.now(),
+  @override
+  State<ScannerScreen> createState() => _ScannerScreenState();
+}
+
+class _ScannerScreenState extends State<ScannerScreen> {
+  bool scanned = false;
+
+  void markAttendance(String code) {
+    final now = DateTime.now();
+    attendanceList.add(
+      AttendanceRecord(
+        studentId: code,
+        dateTime: DateFormat('yyyy-MM-dd HH:mm').format(now),
+        status: "Present",
+      ),
     );
 
-    if (date != null) {
-      setState(() {
-        birthDate = date;
-      });
-      calculateAge();
-    }
-  }
-
-  void calculateAge() {
-    if (birthDate == null) return;
-
-    DateTime today = DateTime.now();
-
-    int years = today.year - birthDate!.year;
-    int months = today.month - birthDate!.month;
-    int days = today.day - birthDate!.day;
-
-    if (days < 0) {
-      months--;
-      days += 30;
-    }
-
-    if (months < 0) {
-      years--;
-      months += 12;
-    }
-
     setState(() {
-      result = "$years years, $months months, $days days";
+      scanned = true;
     });
-  }
 
-  void clearResult() {
-    setState(() {
-      birthDate = null;
-      result = "No result yet";
-    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Attendance marked for $code")),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Simple Age Calculator")),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.cake, size: 70, color: Colors.indigo),
-
-              const SizedBox(height: 20),
-
-              Text(
-                birthDate == null
-                    ? "Select your birthdate"
-                    : DateFormat.yMMMMd().format(birthDate!),
-                style: const TextStyle(fontSize: 18),
-              ),
-
-              const SizedBox(height: 20),
-
-
-
-
-
-
-
-              ElevatedButton(
-                onPressed: pickDate,
-                child: const Text("Pick Birthdate"),
-              ),
-
-              const SizedBox(height: 20),
-
-              Text(
-                result,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.indigo,
-                ),
-                textAlign: TextAlign.center,
-              ),
-
-              const SizedBox(height: 20),
-
-              ElevatedButton.icon(
-                onPressed: (birthDate == null && result == "No result yet")
-                    ? null
-                    : clearResult,
-                icon: const Icon(Icons.delete),
-                label: const Text("Clear Result"),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
-                ),
-              ),
-            ],
+      appBar: AppBar(title: const Text("Scan QR Attendance")),
+      body: Column(
+        children: [
+          Expanded(
+            child: MobileScanner(
+              onDetect: (capture) {
+                if (!scanned) {
+                  final barcode = capture.barcodes.first;
+                  if (barcode.rawValue != null) {
+                    markAttendance(barcode.rawValue!);
+                  }
+                }
+              },
+            ),
           ),
-        ),
+          const Padding(
+            padding: EdgeInsets.all(16),
+            child: Text(
+              "Point camera to QR Code",
+              style: TextStyle(fontSize: 16),
+            ),
+          )
+        ],
       ),
+    );
+  }
+}
+
+// ---------------- RECORDS SCREEN ----------------
+class RecordsScreen extends StatefulWidget {
+  const RecordsScreen({super.key});
+
+  @override
+  State<RecordsScreen> createState() => _RecordsScreenState();
+}
+
+class _RecordsScreenState extends State<RecordsScreen> {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text("Attendance Records")),
+      body: attendanceList.isEmpty
+          ? const Center(child: Text("No records yet"))
+          : ListView.builder(
+              itemCount: attendanceList.length,
+              itemBuilder: (context, index) {
+                final item = attendanceList[index];
+                return Card(
+                  margin: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 6),
+                  child: ListTile(
+                    leading: const Icon(Icons.person),
+                    title: Text("Student ID: ${item.studentId}"),
+                    subtitle: Text("Time: ${item.dateTime}"),
+                    trailing: const Icon(Icons.check_circle,
+                        color: Colors.green),
+                  ),
+                );
+              },
+            ),
     );
   }
 }
