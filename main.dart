@@ -122,51 +122,74 @@ class _MainNavigationState extends State<MainNavigation> {
 
       // 🌸 3D FLOATING NAVIGATION
       bottomNavigationBar: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(35),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.pink.withOpacity(0.2),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          child: NavigationBar(
-            backgroundColor: Colors.transparent,
-            indicatorColor: const Color(0xFFFFD6E0),
-            selectedIndex: currentIndex,
-            labelBehavior:
-                NavigationDestinationLabelBehavior.onlyShowSelected,
-            onDestinationSelected: (index) {
-              setState(() {
-                currentIndex = index;
-              });
-            },
-            destinations: const [
-              NavigationDestination(
-                icon: Icon(Icons.home_rounded),
-                label: 'Home',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.calendar_month_rounded),
-                label: 'Calendar',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.bar_chart_rounded),
-                label: 'Insights',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.settings_rounded),
-                label: 'Settings',
-              ),
-            ],
-          ),
+  padding: const EdgeInsets.all(14),
+  child: Container(
+    decoration: BoxDecoration(
+      color: Theme.of(context).cardColor,
+      borderRadius: BorderRadius.circular(35),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.pink.withOpacity(0.2),
+          blurRadius: 20,
+          offset: const Offset(0, 10),
         ),
-      ),
+      ],
+    ),
+    child: NavigationBar(
+      backgroundColor: Colors.transparent,
+
+      indicatorColor: Theme.of(context).brightness ==
+              Brightness.dark
+          ? Colors.pink.shade700
+          : const Color(0xFFFFD6E0),
+
+      selectedIndex: currentIndex,
+
+      labelBehavior:
+          NavigationDestinationLabelBehavior.onlyShowSelected,
+
+      onDestinationSelected: (index) {
+        setState(() {
+          currentIndex = index;
+        });
+      },
+
+      destinations: [
+        NavigationDestination(
+          icon: Icon(
+            Icons.home_rounded,
+            color: Theme.of(context).iconTheme.color,
+          ),
+          label: 'Home',
+        ),
+
+        NavigationDestination(
+          icon: Icon(
+            Icons.calendar_month_rounded,
+            color: Theme.of(context).iconTheme.color,
+          ),
+          label: 'Calendar',
+        ),
+
+        NavigationDestination(
+          icon: Icon(
+            Icons.bar_chart_rounded,
+            color: Theme.of(context).iconTheme.color,
+          ),
+          label: 'Insights',
+        ),
+
+        NavigationDestination(
+          icon: Icon(
+            Icons.settings_rounded,
+            color: Theme.of(context).iconTheme.color,
+          ),
+          label: 'Settings',
+        ),
+      ],
+    ),
+  ),
+),
     );
   }
 }
@@ -532,6 +555,8 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 // ================= CALENDAR SCREEN =================
 
+// ================= CALENDAR SCREEN =================
+
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key});
 
@@ -542,15 +567,13 @@ class CalendarScreen extends StatefulWidget {
 class _CalendarScreenState extends State<CalendarScreen> {
   DateTime selectedMonth = DateTime.now();
 
-  MoodEntry? getMoodForDay(DateTime day) {
-    for (final mood in moodEntries) {
-      if (mood.date.year == day.year &&
+  // ✅ GET ALL MOODS FOR A DAY
+  List<MoodEntry> getMoodsForDay(DateTime day) {
+    return moodEntries.where((mood) {
+      return mood.date.year == day.year &&
           mood.date.month == day.month &&
-          mood.date.day == day.day) {
-        return mood;
-      }
-    }
-    return null;
+          mood.date.day == day.day;
+    }).toList();
   }
 
   @override
@@ -587,53 +610,81 @@ class _CalendarScreenState extends State<CalendarScreen> {
               ),
               itemCount: daysInMonth,
               itemBuilder: (context, index) {
+
                 final day = DateTime(
                   selectedMonth.year,
                   selectedMonth.month,
                   index + 1,
                 );
 
-                final mood = getMoodForDay(day);
+                // ✅ ALL MOODS FOR THIS DAY
+                final moods = getMoodsForDay(day);
+
+                // ✅ NEWEST MOOD
+                final latestMood =
+                    moods.isNotEmpty ? moods.first : null;
 
                 return GestureDetector(
                   onTap: () {
-                    if (mood != null) {
+
+                    if (moods.isNotEmpty) {
+
                       showDialog(
                         context: context,
                         builder: (_) => AlertDialog(
                           title: Text(
-                            'Day ${day.day} Mood',
+                            'Moods for ${day.day}/${day.month}',
                           ),
-                          content: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                width: 50,
-                                height: 50,
-                                decoration: BoxDecoration(
-                                  color: mood.color,
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-                              Text(mood.note),
-                            ],
+
+                          content: SizedBox(
+                            width: double.maxFinite,
+                            child: ListView.builder(
+                              shrinkWrap: true,
+                              itemCount: moods.length,
+
+                              itemBuilder: (context, i) {
+                                final mood = moods[i];
+
+                                return Card(
+                                  child: ListTile(
+                                    leading: CircleAvatar(
+                                      backgroundColor: mood.color,
+                                    ),
+
+                                    title: Text(mood.note),
+
+                                    subtitle: Text(
+                                      '${mood.date.hour.toString().padLeft(2, '0')}:'
+                                      '${mood.date.minute.toString().padLeft(2, '0')}',
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
                           ),
                         ),
                       );
                     }
                   },
+
                   child: Container(
                     decoration: BoxDecoration(
-                      color: mood?.color ?? Colors.grey.shade200,
+
+                      // ✅ COLOR BASED ON NEWEST MOOD
+                      color: latestMood?.color ??
+                          Colors.grey.shade200,
+
                       borderRadius: BorderRadius.circular(10),
                     ),
+
                     child: Center(
                       child: Text(
                         '${index + 1}',
+
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          color: mood != null
+
+                          color: latestMood != null
                               ? Colors.white
                               : Colors.black,
                         ),
@@ -649,7 +700,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 }
-
 // ================= INSIGHTS SCREEN =================
 
 class InsightsScreen extends StatelessWidget {
@@ -681,70 +731,80 @@ class InsightsScreen extends StatelessWidget {
 
     return stats;
   }
+@override
+Widget build(BuildContext context) {
+  final stats = getMoodStats();
 
-  @override
-  Widget build(BuildContext context) {
-    final stats = getMoodStats();
-    final maxValue =
-        stats.values.isEmpty ? 1 : stats.values.reduce((a, b) => a > b ? a : b);
+  final maxValue =
+      stats.values.reduce((a, b) => a > b ? a : b);
 
-    return Scaffold(
-      appBar: AppBar(title: const Text("Mood Analytics 📊")),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              "Your Mood Trends",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+  // Prevent division by zero
+  final safeMaxValue = maxValue == 0 ? 1 : maxValue;
+
+  return Scaffold(
+    appBar: AppBar(title: const Text("Mood Analytics 📊")),
+    body: Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            "Your Mood Trends",
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
             ),
+          ),
 
-            const SizedBox(height: 20),
+          const SizedBox(height: 20),
 
-            Expanded(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: stats.entries.map((entry) {
-                  final heightFactor =
-                      entry.value / maxValue;
+          Expanded(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: stats.entries.map((entry) {
 
-                  return Column(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      Text(entry.value.toString()),
+                final heightFactor =
+                    entry.value / safeMaxValue;
 
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 500),
-                        width: 30,
-                        height: 200 * heightFactor,
-                        decoration: BoxDecoration(
-                          color: Colors.pink.shade200,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
+                return Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Text(entry.value.toString()),
+
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 500),
+                      width: 30,
+                      height: 200 * heightFactor,
+                      decoration: BoxDecoration(
+                        color: Colors.pink.shade200,
+                        borderRadius: BorderRadius.circular(8),
                       ),
+                    ),
 
-                      const SizedBox(height: 8),
-                      SizedBox(
-                        width: 60,
-                        child: Text(
-                          entry.key.split(" ")[0],
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(fontSize: 10),
-                        ),
+                    const SizedBox(height: 8),
+
+                    SizedBox(
+                      width: 60,
+                      child: Text(
+                        entry.key.split(" ")[0],
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 10),
                       ),
-                    ],
-                  );
-                }).toList(),
-              ),
+                    ),
+                  ],
+                );
+              }).toList(),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
-    );
-  }
+    ),
+  );
 }
+}
+// ================= SETTINGS SCREEN =================
+
 // ================= SETTINGS SCREEN =================
 
 class SettingsScreen extends StatelessWidget {
@@ -754,11 +814,22 @@ class SettingsScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
+        backgroundColor: Theme.of(context).cardColor,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
         ),
-        title: Text(title),
-        content: Text(message),
+        title: Text(
+          title,
+          style: TextStyle(
+            color: Theme.of(context).textTheme.bodyLarge?.color,
+          ),
+        ),
+        content: Text(
+          message,
+          style: TextStyle(
+            color: Theme.of(context).textTheme.bodyMedium?.color,
+          ),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -769,28 +840,44 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  Widget settingsTile({
+  Widget settingsTile(
+    BuildContext context, {
     required IconData icon,
     required String title,
     VoidCallback? onTap,
     Widget? trailing,
   }) {
+    final isDark =
+        Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.pink.withOpacity(0.15),
+            color: isDark
+                ? Colors.black.withOpacity(0.4)
+                : Colors.pink.withOpacity(0.15),
             blurRadius: 10,
             offset: const Offset(0, 5),
           )
         ],
       ),
       child: ListTile(
-        leading: Icon(icon, color: Colors.pink),
-        title: Text(title),
+        leading: Icon(
+          icon,
+          color: Colors.pink,
+        ),
+        title: Text(
+          title,
+          style: TextStyle(
+            color:
+                Theme.of(context).textTheme.bodyLarge?.color,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
         trailing: trailing,
         onTap: onTap,
       ),
@@ -799,76 +886,126 @@ class SettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark =
+        Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text("Settings ⚙️"),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            // 🌙 DARK MODE (WORKING)
-            ValueListenableBuilder<bool>(
-              valueListenable: isDarkMode,
-              builder: (context, value, _) {
-                return settingsTile(
-                  icon: Icons.dark_mode,
-                  title: "Dark Mode",
-                  trailing: Switch(
-                    value: value,
-                    activeColor: Colors.pink,
-                    onChanged: (newValue) {
-                      isDarkMode.value = newValue;
-                    },
-                  ),
-                );
-              },
-            ),
 
-            // 🎨 COLOR MEANINGS
-            settingsTile(
-              icon: Icons.palette,
-              title: "Color Meanings",
-              onTap: () {
-                showInfo(
-                  context,
-                  "Color Meanings 🎨",
-                  "🔥 Red/Orange = Energetic\n"
-                  "💛 Yellow = Happy\n"
-                  "💚 Green = Peaceful\n"
-                  "💙 Blue = Calm\n"
-                  "💜 Purple = Creative\n"
-                  "🌸 Pink = Relaxed",
-                );
-              },
-            ),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: isDark
+              ? const LinearGradient(
+                  colors: [
+                    Color(0xFF121212),
+                    Color(0xFF1E1E1E),
+                  ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                )
+              : const LinearGradient(
+                  colors: [
+                    Color(0xFFFFF5F8),
+                    Color(0xFFFFE4EC),
+                  ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+        ),
 
-            // 🔒 PRIVACY
-            settingsTile(
-              icon: Icons.lock,
-              title: "Privacy Policy",
-              onTap: () {
-                showInfo(
-                  context,
-                  "Privacy 🔒",
-                  "All moods are stored locally on your device only.",
-                );
-              },
-            ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
 
-            // 📊 ABOUT
-            settingsTile(
-              icon: Icons.info,
-              title: "About App",
-              onTap: () {
-                showInfo(
-                  context,
-                  "Mood Journal",
-                  "A simple mood tracking app with color-based emotions.",
-                );
-              },
-            ),
-          ],
+          child: Column(
+            children: [
+              // 🌙 DARK MODE
+              ValueListenableBuilder<bool>(
+                valueListenable: isDarkMode,
+                builder: (context, value, _) {
+                  return settingsTile(
+                    context,
+                    icon: Icons.dark_mode,
+                    title: "Dark Mode",
+
+                    trailing: Switch(
+                      value: value,
+                      activeColor: Colors.pink,
+
+                      onChanged: (newValue) {
+                        isDarkMode.value = newValue;
+                      },
+                    ),
+                  );
+                },
+              ),
+
+              // 🎨 COLOR MEANINGS
+              settingsTile(
+                context,
+                icon: Icons.palette,
+                title: "Color Meanings",
+
+                onTap: () {
+                  showInfo(
+                    context,
+                    "Color Meanings 🎨",
+
+                    "🔥 Red/Orange = Energetic\n"
+                    "💛 Yellow = Happy\n"
+                    "💚 Green = Peaceful\n"
+                    "💙 Blue = Calm\n"
+                    "💜 Purple = Creative\n"
+                    "🌸 Pink = Relaxed",
+                  );
+                },
+              ),
+
+              // 🔒 PRIVACY POLICY
+              settingsTile(
+                context,
+                icon: Icons.lock,
+                title: "Privacy Policy",
+
+                onTap: () {
+                  showInfo(
+                    context,
+                    "Privacy 🔒",
+                    "All moods are stored locally on your device only.",
+                  );
+                },
+              ),
+
+              // 📊 ABOUT APP
+              settingsTile(
+                context,
+                icon: Icons.info,
+                title: "About App",
+
+                onTap: () {
+                  showInfo(
+                    context,
+                    "Mood Journal 🌸",
+                    "A beautiful mood tracking app with "
+                    "color-based emotions and analytics.",
+                  );
+                },
+              ),
+
+              const SizedBox(height: 20),
+
+              // 🌸 VERSION TEXT
+              Text(
+                "Version 1.0.0",
+                style: TextStyle(
+                  color: isDark
+                      ? Colors.white54
+                      : Colors.black54,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
